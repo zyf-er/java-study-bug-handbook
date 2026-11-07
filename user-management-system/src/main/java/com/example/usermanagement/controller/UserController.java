@@ -89,10 +89,6 @@ public class UserController {
         return Result.success(userService.list(wrapper));
     }
 
-    // 统计用户数量
-    @GetMapping("/count")
-    public Result<Long> count() {
-        return Result.success(userService.count());
-    }
+
 
 }
