@@ -4,8 +4,11 @@ package com.example.usermanagement.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.usermanagement.common.Result;
+import com.example.usermanagement.dto.UserAddDTO;
 import com.example.usermanagement.entity.User;
 import com.example.usermanagement.service.UserService;
+import com.example.usermanagement.vo.UserResponseVO;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,20 +25,22 @@ public class UserController {
 
     // 查询全部用户
     @GetMapping
-    public Result<List<User>> list() {
-        return Result.success(userService.list());
+    public Result<List<UserResponseVO>> list() {
+        return Result.success(userService.list().stream()
+                .map(UserResponseVO::from)
+                .toList());
     }
 
     // 查询用户详情
     @GetMapping("/{id}")
-    public Result<User> getById(@PathVariable Long id) {
-        return Result.success(userService.getById(id));
+    public Result<UserResponseVO> getById(@PathVariable Long id) {
+        return Result.success(UserResponseVO.from(userService.getById(id)));
     }
 
-    // 新增用户（此处仅作接口结构示范，正式实现需接入 DTO 和密码哈希）
+    // 新增用户
     @PostMapping
-    public Result<Boolean> testSave(@RequestBody User user) {
-        return Result.success(userService.save(user));
+    public Result<UserResponseVO> add(@Valid @RequestBody UserAddDTO userAddDTO) {
+        return Result.success(UserResponseVO.from(userService.addUser(userAddDTO)));
     }
 
     // 修改用户
@@ -44,6 +49,7 @@ public class UserController {
             @PathVariable Long id,
             @RequestBody User user) {
         user.setId(id);
+        user.setPasswordHash(null);
         return Result.success(userService.updateById(user));
     }
 
@@ -64,12 +70,17 @@ public class UserController {
                 new Page<>(current, size)
         );
 
-        return Result.success(page);
+        Page<UserResponseVO> responsePage =
+                new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        responsePage.setRecords(page.getRecords().stream()
+                .map(UserResponseVO::from)
+                .toList());
+        return Result.success(responsePage);
     }
 
     // 条件查询用户（name 模糊匹配、age 精确匹配，两个参数均可选，未传则不参与条件拼接）
     @GetMapping("/search")
-    public Result<List<User>> search(
+    public Result<List<UserResponseVO>> search(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer age) {
 
@@ -86,7 +97,9 @@ public class UserController {
                 User::getAge, age);
 
         // 执行查询并统一包装返回
-        return Result.success(userService.list(wrapper));
+        return Result.success(userService.list(wrapper).stream()
+                .map(UserResponseVO::from)
+                .toList());
     }
 
 
