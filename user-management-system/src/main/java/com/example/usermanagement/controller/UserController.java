@@ -9,12 +9,16 @@ import com.example.usermanagement.entity.User;
 import com.example.usermanagement.service.UserService;
 import com.example.usermanagement.vo.UserResponseVO;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@Validated
 public class UserController {
 
     private final UserService userService;
@@ -63,11 +67,22 @@ public class UserController {
     // 分页查询用户
     @GetMapping("/page")
     public Result<?> page(
-            @RequestParam(defaultValue = "1") long current,
-            @RequestParam(defaultValue = "10") long size) {
+            @RequestParam(defaultValue = "1")
+            @Min(value = 1, message = "current 必须大于等于 1")
+            long current,
+            @RequestParam(defaultValue = "10")
+            @Min(value = 1, message = "size 必须大于等于 1")
+            @Max(value = 100, message = "size 不能超过 100")
+            long size,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Integer age) {
+
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(name != null && !name.isBlank(), User::getName, name);
+        wrapper.eq(age != null, User::getAge, age);
 
         Page<User> page = userService.page(
-                new Page<>(current, size)
+                new Page<>(current, size), wrapper
         );
 
         Page<UserResponseVO> responsePage =
